@@ -1,13 +1,14 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+let assert = require('assert');
+let createError = require('http-errors');
+let express = require('express');
+let path = require('path');
+let cookieParser = require('cookie-parser');
+let logger = require('morgan');
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+let indexRouter = require('./routes/index');
+let usersRouter = require('./routes/loan');
 
-var app = express();
+let app = express();
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -20,7 +21,43 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
+app.use('/loan', usersRouter);
+
+const connectDb = async () => {
+  const password = '%24Leoj2468'
+  const MongoClient = require('mongodb').MongoClient;
+  const uri = `mongodb+srv://mjh5153:${password}@cluster0-ryuu5.mongodb.net/test?retryWrites=true&w=majority`;
+  const client = new MongoClient(uri, { useNewUrlParser: true });
+  try {
+    await client.connect();
+    console.log('mongo client', client);
+    const db = client.db("test")
+    // .collection("devices");
+    // perform actions on the collection object
+    console.log('db:', db);
+    db.createCollection("loans", { "capped": false, "size": 100000, "max": 5000},
+      (err, results) => {
+        console.log("Collection created.", results);
+        
+      }
+    );
+    db.collection('loans').insertOne({
+      item: "loan",
+      qty: 100,
+      tags: ["amount"],
+      size: { h: 28, w: 35.5, uom: "cm" }
+    })
+    .then(result => {
+      console.log('loan collection results: ', JSON.stringify(result.result.ok));
+      client.close();
+      // process result
+    })
+  } catch(err) {
+    console.log('error ', err);
+  } 
+}
+
+connectDb();
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
